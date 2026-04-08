@@ -61,6 +61,17 @@ class SharePointStore:
             for item in items
         }
 
+    def get_upcoming_events(self, hours_ahead: int = 73) -> list[dict[str, Any]]:
+        """Get upcoming calendar events from SharePoint PRICECalendar list.
+
+        Returns raw SharePoint items. Filtering (SMS opt-in, cancelled, etc.)
+        is done in Python by calendar_client.
+        """
+        return self._read({
+            "action": "get_upcoming_events",
+            "hours_ahead": hours_ahead,
+        })
+
     # ------------------------------------------------------------------
     # Deduplication
     # ------------------------------------------------------------------

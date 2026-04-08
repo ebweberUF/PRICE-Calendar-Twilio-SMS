@@ -256,6 +256,40 @@
                         }
                     }
                 },
+                "Case_get_upcoming_events": {
+                    "case": "get_upcoming_events",
+                    "actions": {
+                        "Get_Upcoming_Event_Items": {
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://uflorida.sharepoint.com/sites/PRICE'))}/tables/@{encodeURIComponent(encodeURIComponent('4003c791-6d6a-461b-a546-decff942678a'))}/items",
+                                "queries": {
+                                    "$filter": "EventDate ge '@{utcNow()}' and EventDate le '@{addHours(utcNow(), triggerBody()?['hours_ahead'])}'",
+                                    "$top": 500
+                                }
+                            },
+                            "runAfter": {}
+                        },
+                        "Set_Upcoming_Events_Result": {
+                            "type": "SetVariable",
+                            "inputs": {
+                                "name": "responseItems",
+                                "value": "@body('Get_Upcoming_Event_Items')?['value']"
+                            },
+                            "runAfter": {
+                                "Get_Upcoming_Event_Items": [
+                                    "Succeeded"
+                                ]
+                            }
+                        }
+                    }
+                },
                 "Case_get_study_config": {
                     "case": "get_study_config",
                     "actions": {

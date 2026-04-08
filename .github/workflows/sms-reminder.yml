@@ -27,7 +27,6 @@ jobs:
           TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           TWILIO_MESSAGING_SERVICE_SID: ${{ secrets.TWILIO_MESSAGING_SERVICE_SID }}
-          CALENDAR_API_URL: ${{ secrets.CALENDAR_API_URL }}
           PA_READ_FLOW_URL: ${{ secrets.PA_READ_FLOW_URL }}
           PA_WRITE_FLOW_URL: ${{ secrets.PA_WRITE_FLOW_URL }}
           TEAM_EMAILS: ${{ secrets.TEAM_EMAILS }}

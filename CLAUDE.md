@@ -23,7 +23,6 @@ python -m price_calendar status       # Show counts
 
 ## Config — everything in .env
 - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_MESSAGING_SERVICE_SID` — Twilio SMS
-- `CALENDAR_API_URL` — PRICE calendar API
 - `PA_READ_FLOW_URL`, `PA_WRITE_FLOW_URL` — Power Automate HTTP trigger URLs
 - `TEAM_EMAILS` — notification recipients
 - Study configs loaded from SharePoint SMS Study Config list via PA Read flow
@@ -32,7 +31,7 @@ python -m price_calendar status       # Show counts
 - `sharepoint_store.py` — all SP operations via Power Automate (dedup, response matching, escalation)
 - `scheduler.py` — three-phase orchestration (send → poll → escalate)
 - `twilio_client.py` — Twilio REST calls, phone normalization, response parsing
-- `calendar_client.py` — calendar API fetch, receives SMS flags from store
+- `calendar_client.py` — parses SharePoint calendar items into events
 - `redcap_client.py` — on-demand phone lookup from env var tokens
 - `config.py` — loads everything from env vars, no local file paths
 

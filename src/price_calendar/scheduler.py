@@ -78,11 +78,8 @@ def _phase_send(
     counts = {"sent_72h": 0, "sent_24h": 0, "skipped": 0, "failed": 0, "no_phone": 0}
 
     sms_flags = store.get_sms_flags()
-    events = get_upcoming_events(
-        config.calendar_api_url,
-        sms_flags=sms_flags,
-        hours_ahead=73,
-    )
+    raw_items = store.get_upcoming_events(hours_ahead=73)
+    events = get_upcoming_events(raw_items, sms_flags=sms_flags)
 
     for event in events:
         mapping = config.get_study_mapping(event.study_code)

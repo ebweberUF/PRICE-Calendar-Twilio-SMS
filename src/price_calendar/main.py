@@ -63,7 +63,6 @@ def cmd_check_config(args: argparse.Namespace) -> None:
         config = Config.load()
         print(f"  Twilio SID:    ...{config.twilio_account_sid[-8:]}")
         print(f"  Twilio MsgSvc: ...{config.twilio_messaging_service_sid[-8:]}")
-        print(f"  Calendar URL:  {config.calendar_api_url}")
         print(f"  PA Read flow:  {'set' if config.pa_read_flow_url else 'MISSING'}")
         print(f"  PA Write flow: {'set' if config.pa_write_flow_url else 'MISSING'}")
         print(f"  Studies:       {list(config.study_mappings.keys())}")

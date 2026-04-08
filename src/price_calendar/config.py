@@ -37,7 +37,6 @@ class Config:
     twilio_account_sid: str
     twilio_auth_token: str
     twilio_messaging_service_sid: str
-    calendar_api_url: str
     pa_read_flow_url: str
     pa_write_flow_url: str
     pa_reply_flow_url: str
@@ -61,7 +60,6 @@ class Config:
             twilio_account_sid=_require_env("TWILIO_ACCOUNT_SID"),
             twilio_auth_token=_require_env("TWILIO_AUTH_TOKEN"),
             twilio_messaging_service_sid=_require_env("TWILIO_MESSAGING_SERVICE_SID"),
-            calendar_api_url=_require_env("CALENDAR_API_URL"),
             pa_read_flow_url=pa_read_url,
             pa_write_flow_url=pa_write_url,
             pa_reply_flow_url=os.environ.get("PA_REPLY_FLOW_URL", ""),
