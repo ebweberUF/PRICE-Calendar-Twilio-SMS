@@ -1,0 +1,327 @@
+{
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "triggers": {
+        "When_a_HTTP_request_is_received": {
+            "type": "Request",
+            "kind": "Http",
+            "inputs": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "action": {
+                            "type": "string"
+                        },
+                        "calendar_event_id": {
+                            "type": "string"
+                        },
+                        "reminder_type": {
+                            "type": "string"
+                        },
+                        "phone_hash": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "action"
+                    ]
+                },
+                "method": "POST"
+            }
+        }
+    },
+    "actions": {
+        "Initialize_responseItems": {
+            "type": "InitializeVariable",
+            "inputs": {
+                "variables": [
+                    {
+                        "name": "responseItems",
+                        "type": "array",
+                        "value": []
+                    }
+                ]
+            },
+            "runAfter": {}
+        },
+        "Switch_on_action": {
+            "type": "Switch",
+            "expression": "@triggerBody()?['action']",
+            "runAfter": {
+                "Initialize_responseItems": [
+                    "Succeeded"
+                ]
+            },
+            "cases": {
+                "Case_get_sms_flags": {
+                    "case": "get_sms_flags",
+                    "actions": {
+                        "Get_SMS_Flag_Items": {
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://uflorida.sharepoint.com/sites/PRICE'))}/tables/@{encodeURIComponent(encodeURIComponent('4003c791-6d6a-461b-a546-decff942678a'))}/items",
+                                "queries": {
+                                    "$filter": "EventDate ge '@{utcNow()}'",
+                                    "$top": 500
+                                }
+                            },
+                            "runAfter": {}
+                        },
+                        "Set_SMS_Flags_Result": {
+                            "type": "SetVariable",
+                            "inputs": {
+                                "name": "responseItems",
+                                "value": "@body('Get_SMS_Flag_Items')?['value']"
+                            },
+                            "runAfter": {
+                                "Get_SMS_Flag_Items": [
+                                    "Succeeded"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "Case_has_reminder": {
+                    "case": "has_reminder",
+                    "actions": {
+                        "Get_Has_Reminder_Items": {
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://uflorida.sharepoint.com/sites/PRICE'))}/tables/@{encodeURIComponent(encodeURIComponent('1a1822ab-bd33-4500-aafc-ab71ab2f6fbb'))}/items",
+                                "queries": {
+                                    "$filter": "CalendarEventID eq '@{triggerBody()?['calendar_event_id']}' and ReminderType eq '@{triggerBody()?['reminder_type']}'",
+                                    "$top": 1
+                                }
+                            },
+                            "runAfter": {}
+                        },
+                        "Set_Has_Reminder_Result": {
+                            "type": "SetVariable",
+                            "inputs": {
+                                "name": "responseItems",
+                                "value": "@body('Get_Has_Reminder_Items')?['value']"
+                            },
+                            "runAfter": {
+                                "Get_Has_Reminder_Items": [
+                                    "Succeeded"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "Case_event_has_response": {
+                    "case": "event_has_response",
+                    "actions": {
+                        "Get_Event_Response_Items": {
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://uflorida.sharepoint.com/sites/PRICE'))}/tables/@{encodeURIComponent(encodeURIComponent('1a1822ab-bd33-4500-aafc-ab71ab2f6fbb'))}/items",
+                                "queries": {
+                                    "$filter": "CalendarEventID eq '@{triggerBody()?['calendar_event_id']}' and ResponseStatus ne 'pending' and ResponseStatus ne 'no_response'",
+                                    "$top": 1
+                                }
+                            },
+                            "runAfter": {}
+                        },
+                        "Set_Event_Response_Result": {
+                            "type": "SetVariable",
+                            "inputs": {
+                                "name": "responseItems",
+                                "value": "@body('Get_Event_Response_Items')?['value']"
+                            },
+                            "runAfter": {
+                                "Get_Event_Response_Items": [
+                                    "Succeeded"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "Case_find_pending": {
+                    "case": "find_pending",
+                    "actions": {
+                        "Get_Pending_Items": {
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://uflorida.sharepoint.com/sites/PRICE'))}/tables/@{encodeURIComponent(encodeURIComponent('1a1822ab-bd33-4500-aafc-ab71ab2f6fbb'))}/items",
+                                "queries": {
+                                    "$filter": "PhoneHash eq '@{triggerBody()?['phone_hash']}' and ResponseStatus eq 'pending'",
+                                    "$top": 1
+                                }
+                            },
+                            "runAfter": {}
+                        },
+                        "Set_Pending_Result": {
+                            "type": "SetVariable",
+                            "inputs": {
+                                "name": "responseItems",
+                                "value": "@body('Get_Pending_Items')?['value']"
+                            },
+                            "runAfter": {
+                                "Get_Pending_Items": [
+                                    "Succeeded"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "Case_get_expired_pending": {
+                    "case": "get_expired_pending",
+                    "actions": {
+                        "Get_Expired_Items": {
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://uflorida.sharepoint.com/sites/PRICE'))}/tables/@{encodeURIComponent(encodeURIComponent('1a1822ab-bd33-4500-aafc-ab71ab2f6fbb'))}/items",
+                                "queries": {
+                                    "$filter": "ResponseStatus eq 'pending' and EventStart lt '@{utcNow()}'",
+                                    "$top": 500
+                                }
+                            },
+                            "runAfter": {}
+                        },
+                        "Set_Expired_Result": {
+                            "type": "SetVariable",
+                            "inputs": {
+                                "name": "responseItems",
+                                "value": "@body('Get_Expired_Items')?['value']"
+                            },
+                            "runAfter": {
+                                "Get_Expired_Items": [
+                                    "Succeeded"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "Case_get_status_counts": {
+                    "case": "get_status_counts",
+                    "actions": {
+                        "Get_All_Status_Items": {
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://uflorida.sharepoint.com/sites/PRICE'))}/tables/@{encodeURIComponent(encodeURIComponent('1a1822ab-bd33-4500-aafc-ab71ab2f6fbb'))}/items",
+                                "queries": {
+                                    "$top": 5000
+                                }
+                            },
+                            "runAfter": {}
+                        },
+                        "Set_Status_Result": {
+                            "type": "SetVariable",
+                            "inputs": {
+                                "name": "responseItems",
+                                "value": "@body('Get_All_Status_Items')?['value']"
+                            },
+                            "runAfter": {
+                                "Get_All_Status_Items": [
+                                    "Succeeded"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "Case_get_study_config": {
+                    "case": "get_study_config",
+                    "actions": {
+                        "Get_Study_Config_Items": {
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://uflorida.sharepoint.com/sites/PRICE'))}/tables/@{encodeURIComponent(encodeURIComponent('2782129a-8c02-41b5-b0a3-94d0238250bc'))}/items",
+                                "queries": {
+                                    "$top": 100
+                                }
+                            },
+                            "runAfter": {}
+                        },
+                        "Set_Study_Config_Result": {
+                            "type": "SetVariable",
+                            "inputs": {
+                                "name": "responseItems",
+                                "value": "@body('Get_Study_Config_Items')?['value']"
+                            },
+                            "runAfter": {
+                                "Get_Study_Config_Items": [
+                                    "Succeeded"
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            "default": {
+                "actions": {}
+            }
+        },
+        "Respond_with_items": {
+            "type": "Response",
+            "kind": "Http",
+            "inputs": {
+                "statusCode": 200,
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "body": {
+                    "items": "@variables('responseItems')"
+                }
+            },
+            "runAfter": {
+                "Switch_on_action": [
+                    "Succeeded"
+                ]
+            }
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "defaultValue": {},
+            "type": "Object"
+        },
+        "$authentication": {
+            "defaultValue": {},
+            "type": "SecureObject"
+        }
+    },
+    "outputs": {}
+}

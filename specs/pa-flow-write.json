@@ -1,0 +1,272 @@
+{
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "triggers": {
+        "When_a_HTTP_request_is_received": {
+            "type": "Request",
+            "kind": "Http",
+            "inputs": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "action": { "type": "string" },
+                        "item_id": { "type": "integer" },
+                        "calendar_event_id": { "type": "string" },
+                        "subject_id": { "type": "string" },
+                        "study_code": { "type": "string" },
+                        "visit_name": { "type": "string" },
+                        "event_start": { "type": "string" },
+                        "location": { "type": "string" },
+                        "experimenter_email": { "type": "string" },
+                        "reminder_type": { "type": "string" },
+                        "mosio_transaction_id": { "type": "string" },
+                        "phone_hash": { "type": "string" },
+                        "response_status": { "type": "string" },
+                        "response_text": { "type": "string" }
+                    },
+                    "required": ["action"]
+                },
+                "method": "POST"
+            }
+        }
+    },
+    "actions": {
+        "Initialize_responseBody": {
+            "type": "InitializeVariable",
+            "inputs": {
+                "variables": [
+                    {
+                        "name": "responseBody",
+                        "type": "object",
+                        "value": {}
+                    }
+                ]
+            },
+            "runAfter": {}
+        },
+        "Switch_on_action": {
+            "type": "Switch",
+            "expression": "@triggerBody()?['action']",
+            "runAfter": {
+                "Initialize_responseBody": [ "Succeeded" ]
+            },
+            "cases": {
+                "Case_log_reminder": {
+                    "case": "log_reminder",
+                    "actions": {
+                        "Create_Reminder_Item": {
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+                                    }
+                                },
+                                "method": "post",
+                                "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://uflorida.sharepoint.com/sites/PRICE'))}/tables/@{encodeURIComponent(encodeURIComponent('1a1822ab-bd33-4500-aafc-ab71ab2f6fbb'))}/items",
+                                "body": {
+                                    "Title": "@{triggerBody()?['subject_id']} - @{triggerBody()?['reminder_type']} - @{triggerBody()?['visit_name']}",
+                                    "SubjectID": "@triggerBody()?['subject_id']",
+                                    "StudyCode": "@triggerBody()?['study_code']",
+                                    "VisitName": "@{if(empty(triggerBody()?['visit_name']), 'Study Visit', triggerBody()?['visit_name'])}",
+                                    "EventStart": "@triggerBody()?['event_start']",
+                                    "Location": "@{if(empty(triggerBody()?['location']), '', triggerBody()?['location'])}",
+                                    "ExperimenterEmail": "@triggerBody()?['experimenter_email']",
+                                    "ReminderType": "@triggerBody()?['reminder_type']",
+                                    "ResponseStatus": "pending",
+                                    "MosioTransactionID": "@triggerBody()?['mosio_transaction_id']",
+                                    "CalendarEventID": "@triggerBody()?['calendar_event_id']",
+                                    "PhoneHash": "@triggerBody()?['phone_hash']"
+                                }
+                            },
+                            "runAfter": {}
+                        },
+                        "Set_Create_Response": {
+                            "type": "SetVariable",
+                            "inputs": {
+                                "name": "responseBody",
+                                "value": {
+                                    "item_id": "@body('Create_Reminder_Item')?['Id']",
+                                    "success": true
+                                }
+                            },
+                            "runAfter": {
+                                "Create_Reminder_Item": [ "Succeeded" ]
+                            }
+                        }
+                    }
+                },
+                "Case_update_response": {
+                    "case": "update_response",
+                    "actions": {
+                        "Get_Reminder_For_Update": {
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://uflorida.sharepoint.com/sites/PRICE'))}/tables/@{encodeURIComponent(encodeURIComponent('1a1822ab-bd33-4500-aafc-ab71ab2f6fbb'))}/items/@{triggerBody()?['item_id']}"
+                            },
+                            "runAfter": {}
+                        },
+                        "Update_Response_Item": {
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+                                    }
+                                },
+                                "method": "patch",
+                                "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://uflorida.sharepoint.com/sites/PRICE'))}/tables/@{encodeURIComponent(encodeURIComponent('1a1822ab-bd33-4500-aafc-ab71ab2f6fbb'))}/items/@{triggerBody()?['item_id']}",
+                                "body": {
+                                    "ResponseStatus": "@triggerBody()?['response_status']",
+                                    "ResponseText": "@{if(empty(triggerBody()?['response_text']), '', triggerBody()?['response_text'])}",
+                                    "ResponseAt": "@utcNow()",
+                                    "Title": "@body('Get_Reminder_For_Update')?['Title']"
+                                }
+                            },
+                            "runAfter": {
+                                "Get_Reminder_For_Update": [ "Succeeded" ]
+                            }
+                        },
+                        "Check_Should_Notify": {
+                            "type": "If",
+                            "expression": {
+                                "and": [
+                                    {
+                                        "not": {
+                                            "equals": ["@triggerBody()?['response_status']", "pending"]
+                                        }
+                                    },
+                                    {
+                                        "not": {
+                                            "equals": ["@triggerBody()?['response_status']", ""]
+                                        }
+                                    }
+                                ]
+                            },
+                            "runAfter": {
+                                "Update_Response_Item": [ "Succeeded" ]
+                            },
+                            "actions": {
+                                "Get_Calendar_Event": {
+                                    "type": "ApiConnection",
+                                    "inputs": {
+                                        "host": {
+                                            "connection": {
+                                                "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+                                            }
+                                        },
+                                        "method": "get",
+                                        "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://uflorida.sharepoint.com/sites/PRICE'))}/tables/@{encodeURIComponent(encodeURIComponent('4003c791-6d6a-461b-a546-decff942678a'))}/items/@{body('Get_Reminder_For_Update')?['CalendarEventID']}"
+                                    },
+                                    "runAfter": {}
+                                },
+                                "Send_Notification": {
+                                    "type": "ApiConnection",
+                                    "inputs": {
+                                        "host": {
+                                            "connection": {
+                                                "name": "@parameters('$connections')['shared_office365']['connectionId']"
+                                            }
+                                        },
+                                        "method": "post",
+                                        "path": "/v2/SharedMailbox/Mail",
+                                        "body": {
+                                            "MailboxAddress": "price-ctsi@ufl.edu",
+                                            "To": "@body('Get_Calendar_Event')?['Lead_x0020_Experimenter']?['Email']",
+                                            "Subject": "@{concat('PRICE SMS: ', body('Get_Reminder_For_Update')?['SubjectID'], ' - ', toUpper(triggerBody()?['response_status']), ' - ', body('Get_Reminder_For_Update')?['VisitName'])}",
+                                            "Body": "@{concat('<p>A participant has responded to an SMS appointment reminder.</p><table border=\"1\" cellpadding=\"8\" cellspacing=\"0\" style=\"border-collapse:collapse;\"><tr><td><b>Status</b></td><td><b>', toUpper(triggerBody()?['response_status']), '</b></td></tr><tr><td>Subject ID</td><td>', body('Get_Reminder_For_Update')?['SubjectID'], '</td></tr><tr><td>Study</td><td>', body('Get_Reminder_For_Update')?['StudyCode'], '</td></tr><tr><td>Visit</td><td>', body('Get_Reminder_For_Update')?['VisitName'], '</td></tr><tr><td>Scheduled</td><td>', body('Get_Reminder_For_Update')?['EventStart'], '</td></tr><tr><td>Location</td><td>', body('Get_Reminder_For_Update')?['Location'], '</td></tr><tr><td>Reply Text</td><td>', if(empty(triggerBody()?['response_text']), '(none)', triggerBody()?['response_text']), '</td></tr></table><br><p style=\"color:gray;font-size:11px;\">Automated notification from PRICE Calendar SMS Reminder system.</p>')}",
+                                            "Importance": "Normal"
+                                        }
+                                    },
+                                    "runAfter": {
+                                        "Get_Calendar_Event": [ "Succeeded" ]
+                                    }
+                                },
+                                "Mark_Notified": {
+                                    "type": "ApiConnection",
+                                    "inputs": {
+                                        "host": {
+                                            "connection": {
+                                                "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+                                            }
+                                        },
+                                        "method": "patch",
+                                        "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://uflorida.sharepoint.com/sites/PRICE'))}/tables/@{encodeURIComponent(encodeURIComponent('1a1822ab-bd33-4500-aafc-ab71ab2f6fbb'))}/items/@{triggerBody()?['item_id']}",
+                                        "body": {
+                                            "NotificationSent": true,
+                                            "Title": "@body('Get_Reminder_For_Update')?['Title']"
+                                        }
+                                    },
+                                    "runAfter": {
+                                        "Send_Notification": [ "Succeeded" ]
+                                    }
+                                }
+                            },
+                            "else": {
+                                "actions": {}
+                            }
+                        },
+                        "Set_Update_Response": {
+                            "type": "SetVariable",
+                            "inputs": {
+                                "name": "responseBody",
+                                "value": {
+                                    "success": true
+                                }
+                            },
+                            "runAfter": {
+                                "Check_Should_Notify": [ "Succeeded" ]
+                            }
+                        }
+                    }
+                }
+            },
+            "default": {
+                "actions": {
+                    "Set_Error_Response": {
+                        "type": "SetVariable",
+                        "inputs": {
+                            "name": "responseBody",
+                            "value": {
+                                "success": false,
+                                "error": "Unknown action"
+                            }
+                        },
+                        "runAfter": {}
+                    }
+                }
+            }
+        },
+        "Respond_with_result": {
+            "type": "Response",
+            "kind": "Http",
+            "inputs": {
+                "statusCode": 200,
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "body": "@variables('responseBody')"
+            },
+            "runAfter": {
+                "Switch_on_action": [ "Succeeded" ]
+            }
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "defaultValue": {},
+            "type": "Object"
+        },
+        "$authentication": {
+            "defaultValue": {},
+            "type": "SecureObject"
+        }
+    },
+    "outputs": {}
+}

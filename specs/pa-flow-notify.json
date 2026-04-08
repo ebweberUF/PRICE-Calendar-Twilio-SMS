@@ -1,0 +1,138 @@
+{
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "triggers": {
+        "When_an_item_is_created_or_modified": {
+            "type": "ApiConnection",
+            "inputs": {
+                "host": {
+                    "connection": {
+                        "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+                    }
+                },
+                "method": "get",
+                "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://uflorida.sharepoint.com/sites/PRICE'))}/tables/@{encodeURIComponent(encodeURIComponent('1a1822ab-bd33-4500-aafc-ab71ab2f6fbb'))}/onupdateditems"
+            },
+            "recurrence": {
+                "frequency": "Minute",
+                "interval": 3
+            },
+            "splitOn": "@triggerBody()?['value']"
+        }
+    },
+    "actions": {
+        "Check_if_notification_needed": {
+            "type": "If",
+            "expression": {
+                "and": [
+                    {
+                        "not": {
+                            "equals": ["@triggerBody()?['ResponseStatus']", "pending"]
+                        }
+                    },
+                    {
+                        "not": {
+                            "equals": ["@triggerBody()?['ResponseStatus']", ""]
+                        }
+                    },
+                    {
+                        "or": [
+                            {
+                                "equals": ["@triggerBody()?['NotificationSent']", false]
+                            },
+                            {
+                                "equals": ["@triggerBody()?['NotificationSent']", null]
+                            }
+                        ]
+                    }
+                ]
+            },
+            "runAfter": {},
+            "actions": {
+                "Get_Calendar_Event": {
+                    "type": "ApiConnection",
+                    "inputs": {
+                        "host": {
+                            "connection": {
+                                "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+                            }
+                        },
+                        "method": "get",
+                        "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://uflorida.sharepoint.com/sites/PRICE'))}/tables/@{encodeURIComponent(encodeURIComponent('4003c791-6d6a-461b-a546-decff942678a'))}/items/@{triggerBody()?['CalendarEventID']}"
+                    },
+                    "runAfter": {}
+                },
+                "Compose_Subject": {
+                    "type": "Compose",
+                    "inputs": "@concat('PRICE SMS: ', triggerBody()?['SubjectID'], ' - ', toUpper(triggerBody()?['ResponseStatus']), ' - ', triggerBody()?['VisitName'])",
+                    "runAfter": {
+                        "Get_Calendar_Event": ["Succeeded"]
+                    }
+                },
+                "Compose_Body": {
+                    "type": "Compose",
+                    "inputs": "@concat('<p>A participant has responded to an SMS appointment reminder.</p><table border=\"1\" cellpadding=\"8\" cellspacing=\"0\" style=\"border-collapse:collapse;\"><tr><td><b>Status</b></td><td><b>', toUpper(triggerBody()?['ResponseStatus']), '</b></td></tr><tr><td>Subject ID</td><td>', triggerBody()?['SubjectID'], '</td></tr><tr><td>Study</td><td>', triggerBody()?['StudyCode'], '</td></tr><tr><td>Visit</td><td>', triggerBody()?['VisitName'], '</td></tr><tr><td>Scheduled</td><td>', triggerBody()?['EventStart'], '</td></tr><tr><td>Location</td><td>', triggerBody()?['Location'], '</td></tr><tr><td>Reply Text</td><td>', if(empty(triggerBody()?['ResponseText']), '(none)', triggerBody()?['ResponseText']), '</td></tr><tr><td>Reply Time</td><td>', if(empty(triggerBody()?['ResponseAt']), 'N/A', triggerBody()?['ResponseAt']), '</td></tr></table><br><p style=\"color:gray;font-size:11px;\">Automated notification from PRICE Calendar SMS Reminder system.</p>')",
+                    "runAfter": {
+                        "Get_Calendar_Event": ["Succeeded"]
+                    }
+                },
+                "Send_Email_From_Shared_Mailbox": {
+                    "type": "ApiConnection",
+                    "inputs": {
+                        "host": {
+                            "connection": {
+                                "name": "@parameters('$connections')['shared_office365']['connectionId']"
+                            }
+                        },
+                        "method": "post",
+                        "path": "/v2/SharedMailbox/Mail",
+                        "body": {
+                            "MailboxAddress": "price-ctsi@ufl.edu",
+                            "To": "@body('Get_Calendar_Event')?['Lead_x0020_Experimenter']?['Email']",
+                            "Subject": "@outputs('Compose_Subject')",
+                            "Body": "@outputs('Compose_Body')",
+                            "Importance": "Normal"
+                        }
+                    },
+                    "runAfter": {
+                        "Compose_Subject": ["Succeeded"],
+                        "Compose_Body": ["Succeeded"]
+                    }
+                },
+                "Mark_Notification_Sent": {
+                    "type": "ApiConnection",
+                    "inputs": {
+                        "host": {
+                            "connection": {
+                                "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+                            }
+                        },
+                        "method": "patch",
+                        "path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://uflorida.sharepoint.com/sites/PRICE'))}/tables/@{encodeURIComponent(encodeURIComponent('1a1822ab-bd33-4500-aafc-ab71ab2f6fbb'))}/items/@{triggerBody()?['ID']}",
+                        "body": {
+                            "NotificationSent": true,
+                            "Title": "@triggerBody()?['Title']"
+                        }
+                    },
+                    "runAfter": {
+                        "Send_Email_From_Shared_Mailbox": ["Succeeded"]
+                    }
+                }
+            },
+            "else": {
+                "actions": {}
+            }
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "defaultValue": {},
+            "type": "Object"
+        },
+        "$authentication": {
+            "defaultValue": {},
+            "type": "SecureObject"
+        }
+    },
+    "outputs": {}
+}

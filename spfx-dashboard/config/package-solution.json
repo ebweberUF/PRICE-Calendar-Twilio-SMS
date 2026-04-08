@@ -1,0 +1,36 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "price-sms-dashboard",
+    "id": "a02ce1a5-9850-47cc-9602-82d3b6a631c5",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "PRICE Center",
+      "websiteUrl": "https://uflorida.sharepoint.com/sites/PRICE",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.20.0"
+    },
+    "metadata": {
+      "shortDescription": { "default": "SMS Reminder Dashboard for PRICE Calendar" },
+      "longDescription": { "default": "View and manage SMS appointment reminders sent to study participants." },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "PRICE SMS Dashboard",
+        "description": "Dashboard web part for SMS reminder management",
+        "id": "b7f83e2a-4c19-4d5e-a8b1-3f6c7d9e0a2b",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/price-sms-dashboard.sppkg"
+  }
+}

@@ -1,0 +1,30 @@
+# Secrets
+.env
+mosio.txt
+twilio.txt
+test_api.py
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Node
+node_modules/
+
+# SPFx build artifacts
+spfx-dashboard/dist/
+spfx-dashboard/lib/
+spfx-dashboard/sharepoint/
+spfx-dashboard/temp/
+
+# Claude
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

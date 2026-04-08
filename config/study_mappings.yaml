@@ -1,0 +1,7 @@
+# Maps calendar studyCode to REDCap project alias + phone field
+# Add studies as they opt in to SMS reminders
+studies:
+  "ULLTRA":
+    redcap_project: "ulltra"
+    phone_field: "pre_cell"
+    subject_id_field: "participant_id"

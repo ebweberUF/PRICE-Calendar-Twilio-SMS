@@ -1,0 +1,35 @@
+name: PRICE SMS Reminders
+
+on:
+  schedule:
+    # Every 30 minutes, 7am-9pm ET (11:00-01:00 UTC)
+    - cron: '*/30 11-23,0-1 * * 1-5'
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  run-cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install requests python-dotenv
+
+      - name: Run SMS reminder cycle
+        env:
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_MESSAGING_SERVICE_SID: ${{ secrets.TWILIO_MESSAGING_SERVICE_SID }}
+          CALENDAR_API_URL: ${{ secrets.CALENDAR_API_URL }}
+          PA_READ_FLOW_URL: ${{ secrets.PA_READ_FLOW_URL }}
+          PA_WRITE_FLOW_URL: ${{ secrets.PA_WRITE_FLOW_URL }}
+          TEAM_EMAILS: ${{ secrets.TEAM_EMAILS }}
+        run: python -m price_calendar run
+        working-directory: src
